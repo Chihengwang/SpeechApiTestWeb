@@ -9,6 +9,7 @@
     #recordingslist audio { display: block; margin-bottom: 10px; }
   </style>
 </head>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.js"></script>
 <body>
 
   <h1>Recorder.js simple WAV export example</h1>
@@ -24,19 +25,21 @@
   
   <h2>Log</h2>
   <pre id="log"></pre>
-
+  <h2>Recoding results</h2>
+  <pre id="speech"></pre>
   <script>
   function __log(e, data) {
     log.innerHTML += "\n" + e + " " + (data || '');
   }
-
+  function __log2(e, data) {
+    speech.innerHTML += "\n" + e + " " + (data || '');
+  }
   var audio_context;
   var recorder;
-
+  // Get user media
   function startUserMedia(stream) {
     var input = audio_context.createMediaStreamSource(stream);
     __log('Media stream created.');
-
     // Uncomment if you want the audio to feedback directly
     //input.connect(audio_context.destination);
     //__log('Input connected to audio context destination.');
@@ -63,14 +66,39 @@
     
     recorder.clear();
   }
-
+  function post_speech_api(file_name){
+    var url='https://speech.platform.bing.com/speech/recognition/interactive/cognitiveservices/v1?language=en-US&format=simple';
+    var fd = new FormData();
+    console.log(file_name)
+    fd.append('fname', file_name);
+    $.ajax({
+        type: 'POST',
+        url: url,
+        data: fd,
+        processData: false,
+        contentType: false,
+        headers:{
+          'Ocp-Apim-Subscription-Key':'e03e1704a142400da5e4198e58b7f121',
+          'Access-Control-Allow-Origin':'*',
+        }
+    }).done(function(data) {
+          var Json_obj = JSON.parse(data);
+          if(Json_obj.RecognitionStatus=='Success'){
+            __log2(Json_obj.DisplayText);
+          }else{
+            __log2('Sorry!!!You didn\'t talk');
+          }
+    });
+  }
   function createDownloadLink() {
     recorder && recorder.exportWAV(function(blob) {
       var url = URL.createObjectURL(blob);
+      console.log(blob);
       var li = document.createElement('li');
       var au = document.createElement('audio');
       var hf = document.createElement('a');
-      
+      var File_obj=new File([blob],"filename");
+      post_speech_api(File_obj);
       au.controls = true;
       au.src = url;
       hf.href = url;
@@ -103,5 +131,6 @@
   </script>
 
   <script src="../dist/recorder.js"></script>
+  
 </body>
 </html>
